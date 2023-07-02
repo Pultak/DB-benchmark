@@ -1,0 +1,55 @@
+version: '3.4'
+
+services:
+  postgres-db:
+    image: postgres:14.1-alpine
+    restart: always
+    networks:                       # specify the IP address of the database
+        kiv-vss-ott-network:
+            ipv4_address: 10.10.0.5
+    environment:
+        - POSTGRES_USER=postgres
+        - POSTGRES_DB=diabetes-zcu-cz-dev
+        - POSTGRES_PASSWORD=postgres
+    ports:
+        - '5432:5432'
+    volumes:
+        - ./db/pg_init.sql:/docker-entrypoint-initdb.d/init.sql
+  mysql-db:
+    image: mysql:8.0
+    cap_add:
+      - SYS_NICE                    # suppresses some not useful error messages.
+    restart: always
+    networks:                       # specify the IP address of the database
+        kiv-vss-ott-network:
+            ipv4_address: 10.10.0.6
+    environment:
+      - MYSQL_DATABASE=diabetes-zcu-cz-dev
+      - MYSQL_ROOT_PASSWORD=password
+    ports:
+      - '3306:3306'
+    volumes:
+  #    - db:/var/lib/mysql
+      - ./db/my_init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  mail:                             # email server (can be replaced with gmail later on)
+    image: maildev/maildev          # docker image (https://hub.docker.com/r/maildev/maildev)
+    restart: always                 # always restart the server when the app restarts
+    networks:                       # specify the IP address of the mail server
+      kiv-vss-ott-network:
+        ipv4_address: 10.10.0.7
+    ports:
+      - "25:25"                     # expose port 25 (SMTP) out of the docker container to the local machine
+      - "8086:80"                   # expose port 80 (HTTP - web UI) out of the docker container to the local machine
+      - "1080:1080"
+      - "1025:1025"              
+    environment:
+      - "TZ=Europe/Prague"          # timezone
+
+
+networks:
+  kiv-vss-ott-network:
+    driver: bridge
+    ipam:
+        config:
+            - subnet: 10.10.0.0/16
